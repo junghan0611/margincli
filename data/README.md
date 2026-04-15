@@ -1,4 +1,4 @@
-# data/ — margincli 데이터셋
+# data/ — abductcli 데이터셋
 
 ## superstore.csv
 
@@ -10,9 +10,9 @@ Kaggle "Sample - Superstore" 데이터셋 스키마 기반 샘플 데이터.
 - **라이선스**: CC0 Public Domain
 - **현재 파일**: 원본 스키마에 맞춘 30행 샘플. 전체 데이터(~10,000행)는 Kaggle에서 다운로드 가능.
 
-### 컬럼 → margincli 도메인 매핑
+### 컬럼 → abductcli 도메인 매핑
 
-| Superstore 컬럼 | margincli 도메인 | 설명 |
+| Superstore 컬럼 | abductcli 도메인 | 설명 |
 |----------------|-----------------|------|
 | Product ID, Product Name | `:product/id`, `:product/name` | 상품 식별 |
 | Category, Sub-Category | `:product/category`, `:product/sub-category` | 상품 분류 |

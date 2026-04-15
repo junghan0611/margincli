@@ -1,4 +1,4 @@
-(ns margincli.engine
+(ns abductcli.engine
   "마진 계산/역산 엔진 — BigDecimal only.
    float을 쓰지 않는다."
   (:import [java.math RoundingMode]))

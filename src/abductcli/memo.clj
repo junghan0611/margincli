@@ -1,7 +1,7 @@
-(ns margincli.memo
+(ns abductcli.memo
   "판단층 — memo 생성 + backtest 평가.
    memo는 append-only. 과거의 멍청했던 판단도 지워지지 않는다."
-  (:require [margincli.io :as mio]))
+  (:require [abductcli.io :as mio]))
 
 (def memos-path "data/memos.jsonl")
 (def evaluations-path "data/evaluations.jsonl")

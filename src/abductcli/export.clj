@@ -1,9 +1,9 @@
-(ns margincli.export
+(ns abductcli.export
   "AI Layer — JSONL 내보내기 3종.
    raw: 기계용 원본 / compact: LLM 읽기용 / scenario: anomaly 묶음"
-  (:require [margincli.io :as mio]
-            [margincli.anomaly :as anom]
-            [margincli.signal :as sig]
+  (:require [abductcli.io :as mio]
+            [abductcli.anomaly :as anom]
+            [abductcli.signal :as sig]
             [cheshire.core :as json]))
 
 ;; ── raw JSONL ─────────────────────────────────────

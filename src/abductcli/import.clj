@@ -1,10 +1,10 @@
-(ns margincli.import
+(ns abductcli.import
   "Raw Layer — CSV → Clojure 맵 → 정규화 → tx JSONL.
    원본 보존 우선. 스키마를 먼저 확정하지 않는다."
   (:require [clojure.data.csv :as csv]
             [clojure.java.io :as io]
             [clojure.string :as str]
-            [margincli.io :as mio]))
+            [abductcli.io :as mio]))
 
 ;; ── 파싱 헬퍼 ─────────────────────────────────────
 
@@ -39,7 +39,7 @@
 ;; ── 도메인 매핑 ───────────────────────────────────
 
 (defn normalize-row
-  "Superstore 원본 행 → margincli 도메인 맵.
+  "Superstore 원본 행 → abductcli 도메인 맵.
    원본 필드를 :raw에 보존하면서 도메인 키를 추가."
   [row]
   (let [sales    (parse-decimal (get row "Sales"))
@@ -116,7 +116,7 @@
 (defn print-summary
   "임포트 요약 출력."
   [{:keys [summary]}]
-  (println "margincli — import 완료")
+  (println "abductcli — import 완료")
   (println)
   (println (str "  총 행:     " (:total-rows summary)))
   (println (str "  총 매출:   " (:total-sales summary)))

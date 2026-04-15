@@ -1,4 +1,4 @@
-# margincli
+# abductcli
 
 에이전트 친화적 마진 분석 CLI. Clojure.
 
@@ -30,22 +30,22 @@ AI가 이해 가능한 JSONL 구조로 재표현하여,
 
 ```bash
 # 데이터 가져오기
-margincli import data/superstore.csv
+abductcli import data/superstore.csv
 
 # 마진 계산
-margincli calc --product "GX1" --channel "coupang" --price 29900
+abductcli calc --product "GX1" --channel "coupang" --price 29900
 
 # 역산: 목표 마진율 달성을 위한 최소 판매가
-margincli reverse --product "GX1" --channel "coupang" --target-margin 0.15
+abductcli reverse --product "GX1" --channel "coupang" --target-margin 0.15
 
 # 행사 시뮬레이션
-margincli simulate --product "GX1" --discount 0.2
+abductcli simulate --product "GX1" --discount 0.2
 
 # JSONL 내보내기 (에이전트용)
-margincli export --format jsonl --unit indicator
+abductcli export --format jsonl --unit indicator
 
 # 쿼리
-margincli query "마진율 10% 이하 제품"
+abductcli query "마진율 10% 이하 제품"
 ```
 
 ## 기술 스택

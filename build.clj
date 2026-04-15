@@ -3,7 +3,7 @@
 
 (def basis (delay (b/create-basis {:project "deps.edn"})))
 (def class-dir "target/classes")
-(def uber-file "target/margincli.jar")
+(def uber-file "target/abductcli.jar")
 
 (defn clean [_]
   (b/delete {:path "target"}))
@@ -14,16 +14,16 @@
   (b/compile-clj {:basis     @basis
                    :src-dirs  ["src"]
                    :class-dir class-dir
-                   :ns-compile '[margincli.core
-                                 margincli.import
-                                 margincli.engine
-                                 margincli.io
-                                 margincli.context
-                                 margincli.anomaly
-                                 margincli.signal
-                                 margincli.memo
-                                 margincli.export]})
+                   :ns-compile '[abductcli.core
+                                 abductcli.import
+                                 abductcli.engine
+                                 abductcli.io
+                                 abductcli.context
+                                 abductcli.anomaly
+                                 abductcli.signal
+                                 abductcli.memo
+                                 abductcli.export]})
   (b/uber {:class-dir class-dir
            :uber-file uber-file
            :basis     @basis
-           :main      'margincli.core}))
+           :main      'abductcli.core}))

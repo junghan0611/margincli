@@ -1,6 +1,6 @@
-(ns margincli.engine-test
+(ns abductcli.engine-test
   (:require [clojure.test :refer [deftest is testing]]
-            [margincli.engine :as eng]))
+            [abductcli.engine :as eng]))
 
 (deftest calc-margin-basic
   (testing "기본 마진 계산 — 수수료 없음"

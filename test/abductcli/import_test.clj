@@ -1,6 +1,6 @@
-(ns margincli.import-test
+(ns abductcli.import-test
   (:require [clojure.test :refer [deftest is testing]]
-            [margincli.import :as imp]))
+            [abductcli.import :as imp]))
 
 (deftest parse-decimal-test
   (testing "문자열 → BigDecimal"

@@ -1,6 +1,6 @@
-(ns margincli.anomaly-test
+(ns abductcli.anomaly-test
   (:require [clojure.test :refer [deftest is testing]]
-            [margincli.anomaly :as anom]))
+            [abductcli.anomaly :as anom]))
 
 (deftest median-test
   (testing "중앙값"

@@ -1,7 +1,7 @@
-(ns margincli.anomaly
+(ns abductcli.anomaly
   "Anomaly Detection — transaction-first 변동점 탐지.
    결과가 흔들린 시점에서만 외부를 탐색한다."
-  (:require [margincli.io :as mio]))
+  (:require [abductcli.io :as mio]))
 
 (def anomalies-path "data/anomalies.jsonl")
 

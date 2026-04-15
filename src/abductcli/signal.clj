@@ -1,9 +1,9 @@
-(ns margincli.signal
+(ns abductcli.signal
   "Signal 선택 — context에서 anomaly 설명 후보를 찾고 승격.
    register-context는 적재, suggest/attach-signal은 승격."
-  (:require [margincli.io :as mio]
-            [margincli.anomaly :as anom]
-            [margincli.context :as ctx]))
+  (:require [abductcli.io :as mio]
+            [abductcli.anomaly :as anom]
+            [abductcli.context :as ctx]))
 
 (def signals-path "data/signals.jsonl")
 
@@ -99,7 +99,7 @@
 (defn print-candidates
   "후보 목록 출력."
   [{:keys [anomaly-id entity candidates]}]
-  (println (str "margincli — signal 후보 (" anomaly-id " / " entity ")"))
+  (println (str "abductcli — signal 후보 (" anomaly-id " / " entity ")"))
   (println)
   (doseq [{:keys [ctx-ref ctx relevance]} candidates]
     (println (str "  " ctx-ref

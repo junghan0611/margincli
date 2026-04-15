@@ -1,4 +1,4 @@
-(ns margincli.io
+(ns abductcli.io
   "JSONL 파일 입출력 — append-only 저장.
    모든 레코드는 JSONL 한 줄 단위."
   (:require [cheshire.core :as json]

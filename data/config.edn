@@ -1,4 +1,4 @@
-;; margincli 설정 — 사람이 조정하는 임계값
+;; abductcli 설정 — 사람이 조정하는 임계값
 {:anomaly
  {:methods [:robust-z :rolling-mean]
   :severity-thresholds {:low 1.5 :medium 2.5 :high 3.5}

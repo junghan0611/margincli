@@ -1,7 +1,7 @@
-(ns margincli.context
+(ns abductcli.context
   "맥락 데이터 등록 — event/indicator 관리.
    register-context는 적재, suggest/attach-signal은 승격."
-  (:require [margincli.io :as mio]
+  (:require [abductcli.io :as mio]
             [clojure.edn :as edn]
             [clojure.string :as str]))
 

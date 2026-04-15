@@ -1,4 +1,4 @@
-# AGENTS.md — margincli
+# AGENTS.md — abductcli
 
 ## 프로젝트 정체성
 
@@ -99,14 +99,14 @@ Human Layer  → CLI 출력 (테이블, 요약), 추후 프론트엔드는 부�
 ## 프로젝트 구조
 
 ```
-margincli/
+abductcli/
 ├── AGENTS.md
 ├── README.md
 ├── deps.edn
 ├── build.clj
 ├── run.sh                    # 빌드/실행 진입점
 ├── src/
-│   └── margincli/
+│   └── abductcli/
 │       ├── core.clj          # CLI 진입점, 서브커맨드 디스패치
 │       ├── import.clj        # Raw Layer — CSV/Excel → EDN/DB
 │       ├── engine.clj        # 마진 계산/역산 엔진 (BigDecimal)
@@ -117,7 +117,7 @@ margincli/
 ├── data/                     # 공개 데이터셋
 │   └── superstore.csv
 ├── test/
-│   └── margincli/
+│   └── abductcli/
 │       ├── engine_test.clj
 │       └── import_test.clj
 └── skill/                    # pi-skills 연동

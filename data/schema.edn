@@ -1,4 +1,4 @@
-;; margincli 스키마 — 6종 레코드
+;; abductcli 스키마 — 6종 레코드
 ;; 양적추론 판단 엔진의 최소 작동 단위
 ;;
 ;; anomaly → candidate signals → memo → evaluation

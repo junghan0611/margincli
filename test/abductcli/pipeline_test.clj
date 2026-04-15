@@ -1,12 +1,12 @@
-(ns margincli.pipeline-test
+(ns abductcli.pipeline-test
   "Furniture -14.68% 시나리오 — 파이프라인 한 바퀴 통합 테스트."
   (:require [clojure.test :refer [deftest is testing use-fixtures]]
-            [margincli.import :as imp]
-            [margincli.io :as mio]
-            [margincli.context :as ctx]
-            [margincli.anomaly :as anom]
-            [margincli.signal :as sig]
-            [margincli.memo :as memo]
+            [abductcli.import :as imp]
+            [abductcli.io :as mio]
+            [abductcli.context :as ctx]
+            [abductcli.anomaly :as anom]
+            [abductcli.signal :as sig]
+            [abductcli.memo :as memo]
             [clojure.java.io :as io]))
 
 ;; ── 테스트 픽스처: 생성된 JSONL 정리 ──────────────
