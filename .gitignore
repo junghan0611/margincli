@@ -10,6 +10,16 @@ data/*.xls
 *.db
 *.sqlite
 
+# Pipeline output (generated JSONL — regenerate with margincli import/detect/etc.)
+data/transactions.jsonl
+data/contexts.jsonl
+data/anomalies.jsonl
+data/signals.jsonl
+data/memos.jsonl
+data/evaluations.jsonl
+data/export-*.jsonl
+data/scenario-*.edn
+
 # IDE
 .idea/
 .vscode/

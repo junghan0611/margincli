@@ -16,7 +16,13 @@
                    :class-dir class-dir
                    :ns-compile '[margincli.core
                                  margincli.import
-                                 margincli.engine]})
+                                 margincli.engine
+                                 margincli.io
+                                 margincli.context
+                                 margincli.anomaly
+                                 margincli.signal
+                                 margincli.memo
+                                 margincli.export]})
   (b/uber {:class-dir class-dir
            :uber-file uber-file
            :basis     @basis

@@ -1,0 +1,77 @@
+;; 2024년 달력/이벤트 맥락팩 — 샘플
+;; margincli import-context --pack data/packs/calendar-sample.edn
+{:name "calendar-sample-2024"
+ :desc "2024년 주요 소매/달력 이벤트 + 매크로 지표 샘플"
+ :contexts
+ [{:ctx-type   "event"
+   :domain     "calendar"
+   :time-start "2024-01-01"
+   :title      "New Year's Day"
+   :source     "calendar"
+   :confidence "confirmed"}
+
+  {:ctx-type   "event"
+   :domain     "calendar"
+   :time-start "2024-02-14"
+   :title      "Valentine's Day"
+   :source     "calendar"
+   :confidence "confirmed"}
+
+  {:ctx-type   "event"
+   :domain     "retail"
+   :time-start "2024-01-15"
+   :time-end   "2024-03-31"
+   :title      "Q1 재고 소진 할인 캠페인"
+   :source     "internal"
+   :confidence "confirmed"}
+
+  {:ctx-type   "indicator"
+   :domain     "macro"
+   :time-start "2024-01-31"
+   :title      "Fed 기준금리 동결 5.25-5.50%"
+   :source     "FRED"
+   :confidence "confirmed"}
+
+  {:ctx-type   "event"
+   :domain     "industry"
+   :time-start "2024-02-01"
+   :time-end   "2024-06-30"
+   :title      "가구 업계 과잉재고 처분 트렌드"
+   :source     "industry-report"
+   :confidence "estimated"}
+
+  {:ctx-type   "event"
+   :domain     "calendar"
+   :time-start "2024-05-27"
+   :title      "Memorial Day"
+   :source     "calendar"
+   :confidence "confirmed"}
+
+  {:ctx-type   "event"
+   :domain     "calendar"
+   :time-start "2024-07-04"
+   :title      "Independence Day"
+   :source     "calendar"
+   :confidence "confirmed"}
+
+  {:ctx-type   "event"
+   :domain     "calendar"
+   :time-start "2024-09-02"
+   :title      "Labor Day"
+   :source     "calendar"
+   :confidence "confirmed"}
+
+  {:ctx-type   "event"
+   :domain     "retail"
+   :time-start "2024-06-15"
+   :time-end   "2024-07-15"
+   :title      "여름 가구 할인전 — Tables/Chairs 최대 45% off"
+   :source     "internal"
+   :confidence "confirmed"}
+
+  {:ctx-type   "event"
+   :domain     "calendar"
+   :time-start "2024-11-29"
+   :title      "Black Friday"
+   :source     "calendar"
+   :confidence "confirmed"}]}

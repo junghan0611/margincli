@@ -1,0 +1,16 @@
+;; margincli 설정 — 사람이 조정하는 임계값
+{:anomaly
+ {:methods [:robust-z :rolling-mean]
+  :severity-thresholds {:low 1.5 :medium 2.5 :high 3.5}
+  :rolling-window 5}
+
+ :signal
+ {:time-windows [7 30 90]
+  :max-candidates 20
+  :domain-weights {:retail   0.8
+                   :industry 0.7
+                   :calendar 0.5
+                   :macro    0.4
+                   :policy   0.4
+                   :weather  0.3
+                   :energy   0.3}}}

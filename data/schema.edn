@@ -1,0 +1,42 @@
+;; margincli 스키마 — 6종 레코드
+;; 양적추론 판단 엔진의 최소 작동 단위
+;;
+;; anomaly → candidate signals → memo → evaluation
+
+{:tx
+ {:required [:id :entity :metric :value :time :grain :source]
+  :optional [:baseline :delta :detail]
+  :desc     "거래/관측 데이터 — 도메인 내부의 숫자"}
+
+ :ctx
+ {:required [:id :ctx-type :domain :time-start :title :source]
+  :optional [:time-end :geo :confidence :tags]
+  :desc     "맥락 데이터 — 도메인 바깥의 사건과 지표"
+  :types    {:ctx-type [:event :indicator]
+             :domain   [:macro :retail :calendar :energy :policy :weather :industry]
+             :confidence [:confirmed :estimated :rumor]}}
+
+ :anomaly
+ {:required [:id :tx-id :method :score :severity :detected-at]
+  :optional [:window :detail]
+  :desc     "변동점 — transaction에서 탐지된 이상"
+  :types    {:method   [:robust-z :rolling-mean]
+             :severity [:low :medium :high]}}
+
+ :signal
+ {:required [:id :ctx-ref :anomaly-id :relevance :status]
+  :optional [:note]
+  :desc     "신호 — context 중 anomaly 설명 후보로 승격된 것"
+  :types    {:status [:candidate :attached :rejected]}}
+
+ :memo
+ {:required [:id :subject :hypothesis :evidence :author :status :created-at]
+  :optional [:expected-direction :prediction-window :parent-id]
+  :desc     "판단 — anomaly+signal을 엮은 해석. append-only."
+  :types    {:status    [:proposed :accepted :rejected :stale :superseded]
+             :direction [:recover :worsen :stable]}}
+
+ :evaluation
+ {:required [:id :memo-id :direction-match :timing-match :magnitude-score :evaluated-at]
+  :optional [:detail]
+  :desc     "평가 — memo의 사후 검증 결과"}}

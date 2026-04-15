@@ -1,9 +1,10 @@
 (ns margincli.import
-  "Raw Layer — CSV → Clojure 맵 → 정규화.
+  "Raw Layer — CSV → Clojure 맵 → 정규화 → tx JSONL.
    원본 보존 우선. 스키마를 먼저 확정하지 않는다."
   (:require [clojure.data.csv :as csv]
             [clojure.java.io :as io]
-            [clojure.string :as str]))
+            [clojure.string :as str]
+            [margincli.io :as mio]))
 
 ;; ── 파싱 헬퍼 ─────────────────────────────────────
 
@@ -132,3 +133,91 @@
                   "  매출:" (:sales info)
                   "  이익:" (:profit info)
                   "  마진:" (.multiply (:margin-rate info) 100M) "%"))))
+
+;; ── 집계 (Ingest) ─────────────────────────────────
+
+(defn- aggregate-group
+  "행 그룹의 집계 지표를 계산."
+  [rows]
+  (let [sales  (reduce + 0M (map #(get-in % [:margin :sales]) rows))
+        profit (reduce + 0M (map #(get-in % [:margin :profit]) rows))
+        cost   (- sales profit)
+        n      (count rows)
+        avg-discount (if (pos? n)
+                       (.divide (reduce + 0M (map #(get-in % [:margin :discount]) rows))
+                                (bigdec n) 4 java.math.RoundingMode/HALF_UP)
+                       0M)
+        margin-rate (if (pos? sales)
+                      (.divide profit sales 4 java.math.RoundingMode/HALF_UP)
+                      0M)]
+    {:sales       (double sales)
+     :profit      (double profit)
+     :cost        (double cost)
+     :rows        n
+     :avg-discount (double avg-discount)
+     :margin-rate  (double margin-rate)}))
+
+(defn aggregate-by
+  "정규화된 행을 grain 기준으로 집계.
+   grain: :category, :sub-category, :region"
+  [normalized-rows grain]
+  (let [key-fn (case grain
+                 :category     #(get-in % [:product :category])
+                 :sub-category #(get-in % [:product :sub-category])
+                 :region       #(get-in % [:channel :region]))]
+    (->> (group-by key-fn normalized-rows)
+         (map (fn [[entity rows]]
+                {:entity  entity
+                 :grain   (name grain)
+                 :metrics (aggregate-group rows)})))))
+
+(defn add-baseline-delta
+  "집계 결과에 baseline(전체 평균)과 delta(편차) 추가."
+  [aggregated metric-key]
+  (let [values (mapv #(get-in % [:metrics metric-key]) aggregated)
+        n      (count values)
+        baseline (if (pos? n) (/ (reduce + 0.0 values) n) 0.0)]
+    (mapv (fn [agg]
+            (let [v (get-in agg [:metrics metric-key])]
+              (assoc agg
+                     :baseline baseline
+                     :delta    (- v baseline))))
+          aggregated)))
+
+(defn rows->tx-records
+  "정규화된 행 → tx JSONL 레코드. metric별로 생성."
+  [normalized-rows source grain]
+  (let [aggregated (aggregate-by normalized-rows grain)
+        with-bd    (add-baseline-delta aggregated :margin-rate)
+        time-range (let [dates (keep #(get-in % [:order :date]) normalized-rows)]
+                     (if (seq dates)
+                       (let [sorted (sort dates)]
+                         (str (first sorted) "/" (last sorted)))
+                       "unknown"))]
+    (vec
+     (map-indexed
+      (fn [idx agg]
+        {:id       (str "tx-" (name grain) "-" (format "%03d" (inc idx)))
+         :type     "tx"
+         :entity   (:entity agg)
+         :metric   "margin-rate"
+         :value    (get-in agg [:metrics :margin-rate])
+         :time     time-range
+         :grain    (name grain)
+         :source   source
+         :baseline (:baseline agg)
+         :delta    (:delta agg)
+         :detail   (:metrics agg)})
+      with-bd))))
+
+(defn ingest
+  "CSV → 정규화 → 집계 → tx JSONL 내보내기.
+   returns {:rows, :summary, :tx-records}"
+  [csv-path]
+  (let [result (import-csv csv-path)
+        rows   (:rows result)
+        cat-tx (rows->tx-records rows csv-path :category)
+        sub-tx (rows->tx-records rows csv-path :sub-category)
+        all-tx (into cat-tx sub-tx)]
+    (mio/write-jsonl "data/transactions.jsonl" all-tx)
+    (assoc result :tx-records all-tx)))
