@@ -2,7 +2,7 @@
 
 ## 프로젝트 정체성
 
-에이전트 친화적 마진 분석 CLI. Clojure.
+양적추론 판단 엔진 CLI. Clojure.
 
 운영 데이터를 원본 손실 없이 보존하고, AI가 읽을 수 있는 JSONL 단위로 재표현한다.
 이 도구의 목표는 예측이 아니다.
@@ -147,30 +147,44 @@ clj -T:build uber
 - [[denote:20260410T144158][전략기획실 엑셀 데이터의 AI 이해용 JSONB 데이터레이크]]
 - [[denote:20250509T135957][©캐글(kaggle) ©허깅페이스(huggingface) 데이터과학 머신러닝 커뮤니티 플랫폼]]
 
+## 현재 상태 (2026-04-16)
+
+**완료:**
+- pipeline 커맨드 — 한 번 실행으로 전체 파이프라인 확인
+- signal relevance 가중 평균 (domain 30%, entity 30%, time 20%, source 20%)
+- sub-category drill-down → memo 가설에 반영
+- entity 키워드 매칭 (하드코딩 — Furniture/Technology/Office Supplies)
+- compact JSONL export
+
+**알려진 한계:**
+- time-window 필터 미적용 — 전체 context 조회 후 relevance 정렬만
+- entity 매칭 하드코딩 — taxonomy 파일 분리 필요
+- pipeline 실행 시 기존 JSONL 전체 삭제 (demo-first)
+- memo 문장이 auto-hypothesis 템플릿 — LLM 연동 시 개선 여지
+
 ## 다음 세션 — TODO
 
 온보딩 검증 기준: [[denote:20260415T154505][abductcli 담당자 온보딩 검증]]
 
-### 우선순위 1: 시계열 tx 보강
-- region grain 실제 출력
-- 일별/주간 tx 생성 (현재는 category/sub-category 집계만)
-- baseline을 이동평균으로 교체 (현재는 전체 평균)
-- delta를 시계열 기준으로 재설계
+### 우선순위 1: signal ranking 테스트 강화
+- Furniture anomaly일 때 여름 가구 할인전이 상위권에 와야 함
+- relevance 순서가 기대와 맞는지 regression test
+- relevance breakdown 노출 (domain=0.30, entity=0.27, ... → total=0.85)
 
-### 우선순위 2: signal retrieval 실장 (현재 가장 큰 갭)
+### 우선순위 2: anomaly 시간 필드 + time-window 실제 필터
 - anomaly 레코드에 :time 필드 추가
 - context 날짜 ±window 필터 실제 적용 (현재는 전체 조회 후 정렬만)
-- entity/geo/domain 매칭 점수 추가
-- relevance breakdown 설명 가능하게
+- time-overlap-score를 실제 날짜 겹침 비율로 교체
 
-### 우선순위 3: drill 설명면
-- detect 후 anomaly 1건을 깊게 파고드는 drill 커맨드
-- 관련 tx, 하위 category, 할인율, signal 후보를 묶어 설명
+### 우선순위 3: 시계열 tx 보강
+- 일별/주간 tx 생성 (현재는 전체 기간 category/sub-category 집계만)
+- baseline을 이동평균으로 교체 (현재는 전체 평균)
+- region grain 추가
 
 ### 우선순위 4: backtest 자동화
 - 현재는 사람이 direction/timing/magnitude 직접 입력
 - 후속 tx와 자동 비교하는 평가 함수 추가
 
 ### 정리 사항
-- README.md / AGENTS.md에 남은 margincli 잔재 정리 → abductcli 정체성으로 통일
-- "양적추론 판단 엔진" 정체성을 README 첫 줄에 반영
+- entity taxonomy를 config.edn 또는 별도 파일로 분리 (하드코딩 제거)
+- pipeline --clean 옵션 또는 run-id/output-dir 분리

@@ -240,6 +240,171 @@
         (println)
         (memo/print-evaluation e)))))
 
+;; ── 커맨드: pipeline ──────────────────────────────
+
+(defn- clean-data-files!
+  "이전 실행 결과 JSONL 정리."
+  []
+  (doseq [path ["data/transactions.jsonl"
+                 "data/contexts.jsonl"
+                 "data/anomalies.jsonl"
+                 "data/signals.jsonl"
+                 "data/memos.jsonl"
+                 "data/evaluations.jsonl"]]
+    (let [f (java.io.File. path)]
+      (when (.exists f) (.delete f)))))
+
+(defn- auto-hypothesis
+  "anomaly + signal + drill-down 조합에서 가설 텍스트 자동 생성."
+  [anomaly signals drill-down]
+  (let [entity   (:entity anomaly)
+        value    (:value anomaly)
+        severity (:severity anomaly)
+        sig-titles (mapv :title signals)
+        ;; drill-down에서 가장 낮은 margin의 sub-category
+        worst (first (sort-by :value drill-down))
+        worst-info (when worst
+                     (str (:entity worst)
+                          " margin=" (format "%.1f%%" (* 100 (double (:value worst))))
+                          " avg-discount=" (format "%.0f%%" (* 100 (get-in worst [:detail :avg-discount] 0)))))]
+    (str entity " 마진율 " (format "%.1f%%" (* 100 (double value)))
+         " — " severity " anomaly 탐지. "
+         (when worst-info
+           (str "유력 후보: " worst-info ". "))
+         "관련 signal: "
+         (str/join "; " sig-titles) ".")))
+
+(defn cmd-pipeline [args]
+  (let [csv-path (or (first args) "data/superstore.csv")
+        pack-path (or (second args) "data/packs/calendar-sample.edn")
+        config (mio/read-config)
+        max-signals (get-in config [:signal :max-attach] 3)]
+
+    ;; ═══ 0. 정리 ═══
+    (clean-data-files!)
+
+    ;; ═══ 1. Import ═══
+    (println "═══ 1단계: Import ═══")
+    (println)
+    (if-not (.exists (java.io.File. csv-path))
+      (do (println (str "  파일 없음: " csv-path)) (System/exit 1))
+      (let [result (imp/ingest csv-path)]
+        (imp/print-summary result)
+        (println)
+
+        ;; ═══ 2. Context 등록 ═══
+        (println "═══ 2단계: Context 등록 ═══")
+        (println)
+        (if-not (.exists (java.io.File. pack-path))
+          (println (str "  팩 없음: " pack-path " — context 없이 진행"))
+          (let [ctx-result (ctx/import-pack pack-path)]
+            (println (str "  팩: " (:pack-name ctx-result) " → " (:imported ctx-result) "건"))
+            (println)
+            (ctx/print-contexts (ctx/list-contexts))))
+        (println)
+
+        ;; ═══ 3. Anomaly 탐지 ═══
+        (println "═══ 3단계: Anomaly 탐지 ═══")
+        (println)
+        (let [txs (mio/read-jsonl "data/transactions.jsonl")
+              cat-txs (filter #(= "category" (:grain %)) txs)
+              anomalies (anom/detect-and-save! cat-txs config)]
+          (if (empty? anomalies)
+            (println "  탐지된 anomaly 없음. 파이프라인 종료.")
+            (do
+              (println (str "  탐지: " (count anomalies) "건"))
+              (println)
+              (anom/print-anomalies anomalies)
+              (println)
+
+              ;; ═══ 3.5. Sub-category 드릴다운 ═══
+              (println "═══ 3.5단계: Sub-category 드릴다운 ═══")
+              (println)
+              (let [sub-txs (filter #(= "sub-category" (:grain %)) txs)
+                    ;; anomaly별 drill-down 결과 수집
+                    drill-map
+                    (into {}
+                      (for [a anomalies]
+                        (let [entity (:entity a)
+                              sub-rows (filter
+                                        (fn [tx]
+                                          (let [sub-cat (:entity tx)]
+                                            (some #(and (= entity (get-in % [:product :category]))
+                                                        (= sub-cat (get-in % [:product :sub-category])))
+                                                  (:rows result))))
+                                        sub-txs)
+                              sorted (sort-by :value sub-rows)]
+                          (println (str "  ── " entity " 하위 ──"))
+                          (doseq [tx sorted]
+                            (println (str "    " (:entity tx)
+                                          "  margin=" (format "%.4f" (double (:value tx)))
+                                          "  δ=" (format "%+.4f" (double (:delta tx)))
+                                          (let [d (get-in tx [:detail :avg-discount])]
+                                            (when d (str "  avg-discount=" (format "%.0f%%" (* 100 d))))))))
+                          (println)
+                          [(:id a) (vec sorted)])))]
+                (println)
+
+                ;; ═══ 4. Signal 연결 ═══
+                (println "═══ 4단계: Signal 검색 + 연결 ═══")
+                (println)
+                (let [attached-signals
+                      (doall
+                       (for [a anomalies
+                             :let [anom-id (:id a)
+                                   result (sig/suggest anom-id config)
+                                   cands (:candidates result)
+                                   top (take max-signals cands)]]
+                         (do
+                           (println (str "  ── " anom-id " (" (:entity a)
+                                         " " (:severity a) ") ──"))
+                           (if (empty? cands)
+                             (do (println "    signal 후보 없음")
+                                 {:anomaly a :signals [] :drill-down []})
+                             (let [signals (doall
+                                            (for [{:keys [ctx-ref ctx relevance]} top]
+                                              (let [s (sig/attach anom-id ctx-ref)]
+                                                (println (str "    → " (:id s)
+                                                              "  rel=" (format "%.2f" relevance)
+                                                              "  [" (:domain ctx) "]"
+                                                              "  " (:title ctx)))
+                                                s)))]
+                               {:anomaly a :signals signals
+                                :drill-down (get drill-map anom-id [])})))))]
+                  (println)
+
+                  ;; ═══ 5. Memo 생성 ═══
+                  (println "═══ 5단계: Memo 생성 (자동 가설) ═══")
+                  (println)
+                  (doseq [{:keys [anomaly signals drill-down]} attached-signals
+                          :when (seq signals)]
+                    (let [hypothesis (auto-hypothesis anomaly signals drill-down)
+                          m (memo/write-memo
+                             {:subject            (:id anomaly)
+                              :hypothesis         hypothesis
+                              :evidence           (mapv :id signals)
+                              :expected-direction "recover"
+                              :prediction-window  "다음 분기"
+                              :author             "agent:abductcli"})]
+                      (memo/print-memo m)
+                      (println)))
+
+                  ;; ═══ 6. Export ═══
+                  (println "═══ 6단계: Export ═══")
+                  (println)
+                  (let [r (export/export-compact "data/export-compact.jsonl")]
+                    (println (str "  compact JSONL: " (:exported r) "건 → " (:path r))))
+                  (println)
+
+                  ;; ═══ 요약 ═══
+                  (println "═══ 파이프라인 완료 ═══")
+                  (println)
+                  (println (str "  tx:       " (count txs) "건"))
+                  (println (str "  anomaly:  " (count anomalies) "건"))
+                  (println (str "  context:  " (count (ctx/list-contexts)) "건"))
+                  (println (str "  signal:   " (count (sig/list-signals)) "건"))
+                  (println (str "  memo:     " (count (memo/list-memos)) "건")))))))))))
+
 ;; ── 메인 ──────────────────────────────────────────
 
 (defn -main [& args]
@@ -258,6 +423,7 @@
       "export"           (cmd-export rest-args)
       "write-memo"       (cmd-write-memo rest-args)
       "backtest"         (cmd-backtest rest-args)
+      "pipeline"         (cmd-pipeline rest-args)
       ;; 도움말
       (do
         (println "abductcli — 양적추론 판단 엔진 CLI")
@@ -284,4 +450,7 @@
         (println "  backtest --memo <id> --direction D --timing T --magnitude M")
         (println)
         (println "Export:")
-        (println "  export --format raw|compact|scenario [--anomaly <id>]")))))
+        (println "  export --format raw|compact|scenario [--anomaly <id>]")
+        (println)
+        (println "Pipeline:")
+        (println "  pipeline [csv] [context-pack]              전체 파이프라인 한 바퀴")))))

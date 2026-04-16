@@ -10,55 +10,77 @@
 ;; ── Relevance 점수 ────────────────────────────────
 
 (defn- domain-weight
-  "도메인 가중치. config 기반."
+  "도메인 가중치. config 기반. 0.0~1.0"
   [domain config]
   (get-in config [:signal :domain-weights (keyword domain)] 0.3))
 
-(defn- time-overlap-score
-  "anomaly 시간 범위와 context 시간 범위의 겹침 점수."
+(defn- time-range-score
+  "context 시간 범위 점수. 범위 있으면 높음."
   [ctx-record]
-  (if (:time-end ctx-record) 0.7 0.4))
+  (if (:time-end ctx-record) 0.8 0.5))
 
 (defn- source-score
-  "출처 유형 가산점."
+  "출처 유형 점수."
   [source]
-  (cond
-    (= source "internal") 0.15
-    (= source "curated")  0.05
-    :else                  0.0))
+  (case source
+    "internal"        0.9
+    "industry-report" 0.7
+    "curated"         0.6
+    "FRED"            0.5
+    "calendar"        0.4
+    0.3))
+
+(defn- entity-match-score
+  "anomaly 엔티티와 context 제목/도메인의 키워드 매칭.
+   Furniture anomaly ↔ '가구' context → 높은 점수."
+  [anomaly-entity ctx-record]
+  (let [title (str (:title ctx-record) " " (:domain ctx-record))
+        title-lower (clojure.string/lower-case title)
+        entity-lower (clojure.string/lower-case (or anomaly-entity ""))
+        ;; 엔티티-키워드 매핑
+        entity-keywords {"furniture" ["furniture" "가구" "table" "chair" "desk" "bookcase"]
+                         "technology" ["technology" "tech" "전자" "기기" "phone" "computer"]
+                         "office supplies" ["office" "사무" "용품" "supply" "paper" "binder"]}
+        keywords (get entity-keywords entity-lower [entity-lower])]
+    (if (some #(clojure.string/includes? title-lower %) keywords)
+      0.9
+      0.3)))
 
 (defn calc-relevance
-  "context 1건의 relevance 점수 (0~1)."
-  [ctx-record config]
-  (min 1.0
-       (+ (domain-weight (:domain ctx-record) config)
-          (time-overlap-score ctx-record)
-          (source-score (:source ctx-record)))))
+  "context 1건의 relevance 점수 (0~1).
+   4개 축의 가중 평균: domain 30% + time 20% + source 20% + entity 30%."
+  [ctx-record anomaly-entity config]
+  (let [d (domain-weight (:domain ctx-record) config)
+        t (time-range-score ctx-record)
+        s (source-score (:source ctx-record))
+        e (entity-match-score anomaly-entity ctx-record)]
+    (+ (* 0.30 d)
+       (* 0.20 t)
+       (* 0.20 s)
+       (* 0.30 e))))
 
 ;; ── 후보 검색 ─────────────────────────────────────
 
 (defn suggest
   "anomaly에 대한 signal 후보 검색.
-   1차: time-window, 2차: domain/relevance 정렬."
+   전체 context를 relevance(domain/entity/time/source) 기준으로 정렬.
+   TODO: time-window 실제 필터링 미적용 — 현재는 정렬만."
   [anomaly-id config]
   (let [anomaly   (anom/find-anomaly anomaly-id)
         _         (when-not anomaly
                     (throw (ex-info (str "anomaly 없음: " anomaly-id) {})))
-        ;; tx의 time에서 날짜 범위 추출 (YYYY-MM-DD/YYYY-MM-DD 또는 단일)
-        time-str  (or (:time anomaly) "")
-        windows   (get-in config [:signal :time-windows] [7 30 90])
+        entity    (:entity anomaly)
         max-cands (get-in config [:signal :max-candidates] 20)
-        ;; 모든 context 가져오기 (시간 필터링은 범위가 넓으므로 전체 조회)
         all-ctxs  (ctx/list-contexts)
         scored    (->> all-ctxs
                        (map (fn [c]
                               {:ctx-ref   (:id c)
                                :ctx       c
-                               :relevance (calc-relevance c config)}))
+                               :relevance (calc-relevance c entity config)}))
                        (sort-by :relevance >)
                        (take max-cands))]
     {:anomaly-id anomaly-id
-     :entity     (:entity anomaly)
+     :entity     entity
      :candidates scored}))
 
 ;; ── 승격 (attach) ─────────────────────────────────
@@ -73,7 +95,7 @@
         ctx       (first (filter #(= ctx-id (:id %)) (ctx/list-contexts)))
         _         (when-not ctx
                     (throw (ex-info (str "context 없음: " ctx-id) {})))
-        relevance (calc-relevance ctx config)
+        relevance (calc-relevance ctx (:entity anomaly) config)
         signal    {:id         (mio/next-id "sig" signals-path)
                    :type       "signal"
                    :ctx-ref    ctx-id
