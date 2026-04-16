@@ -1,40 +1,50 @@
 # AGENTS.md — abductcli
 
-## 프로젝트 정체성
+## Project Identity
 
-양적추론 판단 엔진 CLI. Clojure.
+Cross-domain quantitative abductive reasoning engine. Clojure CLI.
 
-운영 데이터를 원본 손실 없이 보존하고, AI가 읽을 수 있는 JSONL 단위로 재표현한다.
-이 도구의 목표는 예측이 아니다.
-**현재 시점의 최선 판단 재료를 드러내는 데이터 표면**이다.
+The human using this tool cannot grasp scale. A banana at the corner store,
+the Manhattan Project, GPU clusters serving millions of LLM queries,
+the logistics of Stalingrad — these are all the same problem:
+**given a surprising number and fragments of information, reason backward
+to the hidden quantities that must be true.**
 
-## 설계 원칙
+This is not a margin analysis tool. The Superstore demo was proof-of-concept.
+The real purpose is connecting data from unrelated domains to practice
+abductive reasoning — inference to the best explanation.
 
-### 데이터는 코드다
+Pipeline: anomaly → signal → memo → evaluation.
+The pipeline is domain-agnostic. What changes per domain is the import layer
+and the context sources.
 
-- Clojure의 immutable 맵이 곧 도메인 모델이다.
-- 별도 ORM/스키마 정의 없이, 맵 → 맵 변환이 파이프라인의 전부.
-- EDN은 내부 표현, JSON/JSONL은 외부 인터페이스.
-- BigDecimal은 JVM 내장 — 마진 계산에서 float을 쓰지 않는다.
+## Design Principles
 
-### 원본 보존 우선
+### Data is code
+- Clojure immutable maps are the domain model. No ORM, no schema-first.
+- Map → map transforms are the entire pipeline.
+- EDN internal, JSON/JSONL external interface.
 
-- 스키마를 먼저 확정하지 않는다. 원본을 잃지 않는 것이 먼저.
-- 공개 데이터셋(Kaggle 등)으로 시작한다. 누구나 복제해서 돌릴 수 있어야 한다.
-- Datomic 사상: immutable + time-aware + 원본 보존.
+### Preserve originals
+- Don't fix the schema first. Preserve the source first.
+- Start with public datasets (Kaggle, World Bank, etc). Anyone can replicate.
 
-### CLI + 에이전트 스킬
+### Cross-domain by design
+- An anomaly in retail margin can be explained by a signal from agriculture.
+- A signal about GPU datacenter capacity can explain an anomaly in API latency.
+- The tool should make "ridiculous" cross-domain connections testable.
+- Entity matching must work across domain boundaries, not just within one dataset.
 
-- 웹앱이 아니다. 터미널에서 돌아가는 CLI.
-- pi-skills로 등록 가능한 구조 — 에이전트가 직접 호출.
-- 프론트엔드는 필요할 때 붙인다 (ClojureScript, API 분리).
+### CLI + agent skill
+- Terminal CLI. Agent-callable via pi-skills.
+- No web frontend until the reasoning pipeline is solid.
 
-### 예측에 대한 태도
-
-AI가 해야 할 일은 미래를 단정하는 것이 아니라:
-- 현재 시점에 어떤 데이터가 중요한지 드러내고
-- 서로 흩어진 자료를 연결하며
-- 사람이 결정을 내리기 위한 최선의 현재 맥락을 제공하는 것
+### Not prediction
+- The goal is not to predict the future.
+- The goal is: surface what fragments are relevant now, connect scattered data,
+  and provide the best current context for a human to make judgment calls.
+- Track guesses (memos) and check them later (evaluation).
+  The point is learning which cross-domain intuitions actually hold.
 
 ## 3층 아키텍처
 
@@ -142,49 +152,53 @@ clj -T:build uber
 ./run.sh calc --product GX1 --channel coupang --price 29900
 ```
 
-## 관련 문서
+## Related Documents
 
 - [[denote:20260410T144158][전략기획실 엑셀 데이터의 AI 이해용 JSONB 데이터레이크]]
 - [[denote:20250509T135957][©캐글(kaggle) ©허깅페이스(huggingface) 데이터과학 머신러닝 커뮤니티 플랫폼]]
+- [[denote:20240815T133910][@제프리웨스트 스케일 - 생물 도시 기업 보편 법칙]]
+- [[denote:20240617T052758][미래교육 질적연구 인지언어 바칼로레아]]
 
-## 현재 상태 (2026-04-16)
+## Current State (2026-04-16)
 
-**완료:**
-- pipeline 커맨드 — 한 번 실행으로 전체 파이프라인 확인
-- signal relevance 가중 평균 (domain 30%, entity 30%, time 20%, source 20%)
-- sub-category drill-down → memo 가설에 반영
-- entity 키워드 매칭 (하드코딩 — Furniture/Technology/Office Supplies)
+**Working (single-domain demo):**
+- pipeline command — full Superstore flow in one execution
+- signal relevance weighted average (domain/entity/time/source)
+- sub-category drill-down → memo hypothesis
 - compact JSONL export
 
-**알려진 한계:**
-- time-window 필터 미적용 — 전체 context 조회 후 relevance 정렬만
-- entity 매칭 하드코딩 — taxonomy 파일 분리 필요
-- pipeline 실행 시 기존 JSONL 전체 삭제 (demo-first)
-- memo 문장이 auto-hypothesis 템플릿 — LLM 연동 시 개선 여지
+**Known limits:**
+- Only Superstore dataset — no cross-domain reasoning yet
+- time-window filtering not applied (full scan + sort only)
+- entity matching hardcoded (Furniture/Technology/Office Supplies only)
+- pipeline wipes all data on each run (demo-first)
+- auto-hypothesis is template-based, not LLM-generated
 
-## 다음 세션 — TODO
+## TODO — Next Sessions
 
-온보딩 검증 기준: [[denote:20260415T154505][abductcli 담당자 온보딩 검증]]
+Onboarding ref: [[denote:20260415T154505][abductcli 담당자 온보딩 검증]]
 
-### 우선순위 1: signal ranking 테스트 강화
-- Furniture anomaly일 때 여름 가구 할인전이 상위권에 와야 함
-- relevance 순서가 기대와 맞는지 regression test
-- relevance breakdown 노출 (domain=0.30, entity=0.27, ... → total=0.85)
+### Priority 1: Second dataset — cross-domain connection
+- Add a non-retail dataset (agriculture, energy, population, or logistics)
+- Make the import layer generic enough for different CSV schemas
+- Test: can a signal from domain A explain an anomaly in domain B?
+- This is the existential test for abductcli's identity
 
-### 우선순위 2: anomaly 시간 필드 + time-window 실제 필터
-- anomaly 레코드에 :time 필드 추가
-- context 날짜 ±window 필터 실제 적용 (현재는 전체 조회 후 정렬만)
-- time-overlap-score를 실제 날짜 겹침 비율로 교체
+### Priority 2: Generic import + context sources
+- Import normalizer should be configurable per dataset (column mapping)
+- Context can come from Denote notes, web search, or manual entry
+- Entity matching via taxonomy file or keyword dictionary (not hardcoded)
 
-### 우선순위 3: 시계열 tx 보강
-- 일별/주간 tx 생성 (현재는 전체 기간 category/sub-category 집계만)
-- baseline을 이동평균으로 교체 (현재는 전체 평균)
-- region grain 추가
+### Priority 3: Signal ranking regression tests
+- Relevance ordering must be predictable and testable
+- Relevance breakdown visible (domain=0.30, entity=0.27, ... → total=0.85)
 
-### 우선순위 4: backtest 자동화
-- 현재는 사람이 direction/timing/magnitude 직접 입력
-- 후속 tx와 자동 비교하는 평가 함수 추가
+### Priority 4: Time-aware retrieval
+- Anomaly records need :time field
+- Context date ±window filter actually applied
+- time-overlap-score based on real date overlap ratio
 
-### 정리 사항
-- entity taxonomy를 config.edn 또는 별도 파일로 분리 (하드코딩 제거)
-- pipeline --clean 옵션 또는 run-id/output-dir 분리
+### Later
+- Backtest automation (auto-compare memo prediction vs subsequent data)
+- pipeline --clean option or run-id/output-dir separation
+- LLM-assisted hypothesis generation (use pipeline output as prompt context)
