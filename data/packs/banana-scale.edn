@@ -1,0 +1,62 @@
+;; Banana supply chain scale — LLM-generated fragments (unverified)
+;; Each context is a claim that needs verification against real data.
+;; Source "llm-unverified" means: this came from an LLM, not a database.
+{:name "banana-scale-fragments"
+ :desc "Banana supply chain scale reasoning — unverified LLM fragments for cross-check"
+ :contexts
+ [{:ctx-type   "estimate"
+   :domain     "agriculture"
+   :time-start "2024-01-01"
+   :time-end   "2024-12-31"
+   :title      "Global banana production ~120M tons/year (FAO, unverified)"
+   :source     "llm-unverified"
+   :confidence "low"}
+
+  {:ctx-type   "estimate"
+   :domain     "agriculture"
+   :time-start "2024-01-01"
+   :title      "Banana cultivation area ~5M hectares worldwide (unverified)"
+   :source     "llm-unverified"
+   :confidence "low"}
+
+  {:ctx-type   "estimate"
+   :domain     "logistics"
+   :time-start "2024-01-01"
+   :title      "Banana export volume ~20M tons/year, ~15% of production (unverified)"
+   :source     "llm-unverified"
+   :confidence "low"}
+
+  {:ctx-type   "estimate"
+   :domain     "logistics"
+   :time-start "2024-01-01"
+   :title      "Refrigerated container ship carries 3000-4000 tons of bananas (unverified)"
+   :source     "llm-unverified"
+   :confidence "low"}
+
+  {:ctx-type   "estimate"
+   :domain     "agriculture"
+   :time-start "2024-01-01"
+   :title      "2-3M workers directly in banana farming worldwide (unverified)"
+   :source     "llm-unverified"
+   :confidence "very-low"}
+
+  {:ctx-type   "indicator"
+   :domain     "trade"
+   :time-start "2024-01-01"
+   :title      "Ecuador is #1 banana exporter, Philippines #2 (generally known)"
+   :source     "common-knowledge"
+   :confidence "medium"}
+
+  {:ctx-type   "estimate"
+   :domain     "logistics"
+   :time-start "2024-01-01"
+   :title      "Banana transport cost ~$0.10-0.20 per kg from farm to destination port (unverified)"
+   :source     "llm-unverified"
+   :confidence "low"}
+
+  {:ctx-type   "indicator"
+   :domain     "retail"
+   :time-start "2024-01-01"
+   :title      "Korean banana retail price 1500-3000 KRW per bunch, mostly Philippine/Ecuadorian origin"
+   :source     "observation"
+   :confidence "confirmed"}]}

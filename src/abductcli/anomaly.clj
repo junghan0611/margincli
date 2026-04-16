@@ -95,6 +95,34 @@
       (mio/append-jsonl anomalies-path a))
     anomalies))
 
+;; ── 수동 선언 ────────────────────────────────────
+
+(defn declare-anomaly!
+  "사람이 직접 선언하는 anomaly — CSV 통계 탐지 없이.
+   'I find this number surprising' = anomaly.
+   returns: anomaly record"
+  [{:keys [claim number unit entity domain hidden-quantities]}]
+  (let [anomaly {:id          (mio/next-id "anom" anomalies-path)
+                 :type        "anomaly"
+                 :method      "human-declared"
+                 :claim       claim
+                 :entity      (or entity "unknown")
+                 :metric      "declared"
+                 :value       (or number 0)
+                 :unit        unit
+                 :domain      domain
+                 :severity    "question"
+                 :score       0
+                 :score-raw   0.0
+                 :hidden-quantities (or hidden-quantities [])
+                 :detected-at (mio/now-iso)
+                 :detail      {:claim claim
+                               :number number
+                               :unit unit
+                               :domain domain}}]
+    (mio/append-jsonl anomalies-path anomaly)
+    anomaly))
+
 ;; ── 조회 ──────────────────────────────────────────
 
 (defn list-anomalies []

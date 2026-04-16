@@ -1,4 +1,4 @@
-;; abductcli 설정 — 사람이 조정하는 임계값
+;; abductcli config — human-tunable thresholds
 {:anomaly
  {:methods [:robust-z :rolling-mean]
   :severity-thresholds {:low 1.5 :medium 2.5 :high 3.5}
@@ -7,10 +7,21 @@
  :signal
  {:time-windows [7 30 90]
   :max-candidates 20
-  :domain-weights {:retail   0.8
-                   :industry 0.7
-                   :calendar 0.5
-                   :macro    0.4
-                   :policy   0.4
-                   :weather  0.3
-                   :energy   0.3}}}
+  :max-attach 3
+  ;; domain weights: how much does domain match matter?
+  ;; cross-domain reasoning means we should NOT over-penalize unknown domains.
+  :domain-weights {:retail      0.7
+                   :industry    0.7
+                   :agriculture 0.7
+                   :logistics   0.7
+                   :trade       0.6
+                   :energy      0.6
+                   :military    0.6
+                   :infrastructure 0.6
+                   :calendar    0.4
+                   :macro       0.5
+                   :policy      0.5
+                   :weather     0.4
+                   :observation 0.6}
+  ;; default for unknown domains — keep it reasonable for cross-domain
+  :default-domain-weight 0.5}}

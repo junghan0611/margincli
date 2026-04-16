@@ -240,6 +240,39 @@
         (println)
         (memo/print-evaluation e)))))
 
+;; ── 커맨드: question ──────────────────────────────
+
+(defn cmd-question [args]
+  (let [opts  (parse-opts args)
+        claim (get-opt opts "claim")
+        num   (some-> (get-opt opts "number") Double/parseDouble)
+        unit  (get-opt opts "unit")
+        entity (get-opt opts "entity")
+        domain (get-opt opts "domain")
+        hidden (get-opt opts "hidden")]
+    (if (nil? claim)
+      (do (println "Usage: abductcli question --claim \"A banana costs 1500 won\" --number 1500 --unit KRW --entity banana --domain agriculture")
+          (println "  Optional: --hidden \"hectares,workers,ships\""))
+      (let [hidden-vec (when hidden (str/split hidden #","))
+            a (anom/declare-anomaly!
+               {:claim             claim
+                :number            num
+                :unit              unit
+                :entity            entity
+                :domain            domain
+                :hidden-quantities hidden-vec})]
+        (println "abductcli — question registered as anomaly")
+        (println)
+        (println (str "  " (:id a) "  [" (:severity a) "]"))
+        (println (str "  claim:  " (:claim a)))
+        (println (str "  number: " (:value a) " " (:unit a)))
+        (println (str "  entity: " (:entity a)))
+        (println (str "  domain: " (:domain a)))
+        (when (seq (:hidden-quantities a))
+          (println (str "  hidden: " (str/join ", " (:hidden-quantities a)))))
+        (println)
+        (println (str "  Next: register context, then suggest-signals --anomaly " (:id a)))))))
+
 ;; ── 커맨드: pipeline ──────────────────────────────
 
 (defn- clean-data-files!
@@ -424,6 +457,7 @@
       "write-memo"       (cmd-write-memo rest-args)
       "backtest"         (cmd-backtest rest-args)
       "pipeline"         (cmd-pipeline rest-args)
+      "question"         (cmd-question rest-args)
       ;; 도움말
       (do
         (println "abductcli — 양적추론 판단 엔진 CLI")
@@ -453,4 +487,8 @@
         (println "  export --format raw|compact|scenario [--anomaly <id>]")
         (println)
         (println "Pipeline:")
-        (println "  pipeline [csv] [context-pack]              전체 파이프라인 한 바퀴")))))
+        (println "  pipeline [csv] [context-pack]              전체 파이프라인 한 바퀴")
+        (println)
+        (println "Question (manual anomaly):")
+        (println "  question --claim \"...\" --number N --unit U --entity E --domain D")
+        (println "           [--hidden \"qty1,qty2,...\"]       scale question 등록")))))

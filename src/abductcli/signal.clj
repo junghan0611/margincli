@@ -12,7 +12,8 @@
 (defn- domain-weight
   "도메인 가중치. config 기반. 0.0~1.0"
   [domain config]
-  (get-in config [:signal :domain-weights (keyword domain)] 0.3))
+  (let [default (get-in config [:signal :default-domain-weight] 0.5)]
+    (get-in config [:signal :domain-weights (keyword domain)] default)))
 
 (defn- time-range-score
   "context 시간 범위 점수. 범위 있으면 높음."
@@ -32,28 +33,46 @@
 
 (defn- entity-match-score
   "anomaly 엔티티와 context 제목/도메인의 키워드 매칭.
-   Furniture anomaly ↔ '가구' context → 높은 점수."
-  [anomaly-entity ctx-record]
+   1) 하드코딩 매핑 체크 (Superstore demo용)
+   2) entity 이름에서 토큰 추출 → context 제목에서 검색
+   3) anomaly domain과 context domain 일치 체크"
+  [anomaly-entity anomaly-domain ctx-record]
   (let [title (str (:title ctx-record) " " (:domain ctx-record))
         title-lower (clojure.string/lower-case title)
         entity-lower (clojure.string/lower-case (or anomaly-entity ""))
-        ;; 엔티티-키워드 매핑
+        ctx-domain (clojure.string/lower-case (or (:domain ctx-record) ""))
+        anom-domain (clojure.string/lower-case (or anomaly-domain ""))
+        ;; 하드코딩 매핑 (Superstore demo backward compat)
         entity-keywords {"furniture" ["furniture" "가구" "table" "chair" "desk" "bookcase"]
                          "technology" ["technology" "tech" "전자" "기기" "phone" "computer"]
                          "office supplies" ["office" "사무" "용품" "supply" "paper" "binder"]}
-        keywords (get entity-keywords entity-lower [entity-lower])]
-    (if (some #(clojure.string/includes? title-lower %) keywords)
+        hardcoded (get entity-keywords entity-lower nil)]
+    (cond
+      ;; 하드코딩 매핑 히트
+      (and hardcoded (some #(clojure.string/includes? title-lower %) hardcoded))
       0.9
-      0.3)))
+
+      ;; entity 토큰이 context 제목에 등장 (e.g. "banana" in "banana production")
+      (let [tokens (clojure.string/split entity-lower #"[-_\s]+")]
+        (some #(and (> (count %) 2)
+                    (clojure.string/includes? title-lower %))
+              tokens))
+      0.85
+
+      ;; anomaly domain과 context domain 일치
+      (and (seq anom-domain) (= anom-domain ctx-domain))
+      0.6
+
+      :else 0.2)))
 
 (defn calc-relevance
   "context 1건의 relevance 점수 (0~1).
    4개 축의 가중 평균: domain 30% + time 20% + source 20% + entity 30%."
-  [ctx-record anomaly-entity config]
+  [ctx-record anomaly-entity anomaly-domain config]
   (let [d (domain-weight (:domain ctx-record) config)
         t (time-range-score ctx-record)
         s (source-score (:source ctx-record))
-        e (entity-match-score anomaly-entity ctx-record)]
+        e (entity-match-score anomaly-entity anomaly-domain ctx-record)]
     (+ (* 0.30 d)
        (* 0.20 t)
        (* 0.20 s)
@@ -70,13 +89,14 @@
         _         (when-not anomaly
                     (throw (ex-info (str "anomaly 없음: " anomaly-id) {})))
         entity    (:entity anomaly)
+        domain    (:domain anomaly)
         max-cands (get-in config [:signal :max-candidates] 20)
         all-ctxs  (ctx/list-contexts)
         scored    (->> all-ctxs
                        (map (fn [c]
                               {:ctx-ref   (:id c)
                                :ctx       c
-                               :relevance (calc-relevance c entity config)}))
+                               :relevance (calc-relevance c entity domain config)}))
                        (sort-by :relevance >)
                        (take max-cands))]
     {:anomaly-id anomaly-id
@@ -95,7 +115,7 @@
         ctx       (first (filter #(= ctx-id (:id %)) (ctx/list-contexts)))
         _         (when-not ctx
                     (throw (ex-info (str "context 없음: " ctx-id) {})))
-        relevance (calc-relevance ctx (:entity anomaly) config)
+        relevance (calc-relevance ctx (:entity anomaly) (:domain anomaly) config)
         signal    {:id         (mio/next-id "sig" signals-path)
                    :type       "signal"
                    :ctx-ref    ctx-id
